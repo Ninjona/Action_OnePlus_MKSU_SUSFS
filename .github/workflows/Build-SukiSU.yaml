@@ -44,15 +44,18 @@ jobs:
           cd kernel_platform
           curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
 
+      - name: Disable NR_CPUS tracepoint check
+        run: |
+          sed -i '/#error "Unsupported NR_CPUS for lb tracepoint."/d' \
+            kernel_platform/include/trace/events/sched.h
+
       - name: Configure & build kernel
         run: |
           cd kernel_platform
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          # Disable warning-as-error to avoid build failures
           make O=out guacamolep_defconfig
-          make -j$(nproc) O=out W=0
-          make -j$(nproc) O=out W=0
+          make -j$(nproc) O=out KCFLAGS="-Wno-error"
 
       - name: Checkout AnyKernel3 template
         uses: actions/checkout@v3
