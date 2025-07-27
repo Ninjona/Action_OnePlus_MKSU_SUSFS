@@ -1,81 +1,73 @@
-name: Build SukiSU Ultra for OnePlus7Pro
+name: Build SukiSU
 
 on:
-  workflow_dispatch:
-    inputs:
-      device:
-        description: 'Device codename (e.g., guacamolep)'
-        required: true
-        default: 'guacamolep'
-      branch:
-        description: 'Kernel branch (e.g., op_sm8150-base)'
-        required: true
-        default: 'op_sm8150-base'
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      UPSTREAM_REPO: 'crdroidandroid/android_kernel_oneplus_sm8150'
-      ANYKERNEL_REPO: 'osm0sis/AnyKernel3'
-
+    strategy:
+      matrix:
+        device:
+          - guacamole
+          - guacamoleb
+          - sm8150  # OnePlus 7 Pro (add support)
+        kernel_path:
+          - "android_kernel_oneplus_sm8150"
+        anykernel_path:
+          - "AnyKernel3"
     steps:
-      - name: Checkout upstream kernel
+      - name: Checkout SukiSU repo
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.UPSTREAM_REPO }}
-          ref: ${{ github.event.inputs.branch }}
-          path: kernel_platform
+          path: SukiSU
 
-      - name: Install cross-compiler tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+      - name: Checkout device kernel
+        uses: actions/checkout@v3
+        with:
+          repository: LineageOS/android_kernel_oneplus_sm8150
+          path: ${{ matrix.kernel_path }}
 
-      - name: Fetch OnePlus vendor defconfig
-        run: |
-          mkdir -p kernel_platform/arch/arm64/configs/vendor
-          curl -L -o kernel_platform/arch/arm64/configs/vendor/sm8150-perf_defconfig \
-            https://raw.githubusercontent.com/OnePlusOSS/android_kernel_oneplus_sm8150/oneplus/SM8150_P_9.0/arch/arm64/configs/vendor/sm8150-perf_defconfig
-          ln -sf vendor/sm8150-perf_defconfig kernel_platform/arch/arm64/configs/guacamolep_defconfig
+      - name: Checkout AnyKernel3
+        uses: actions/checkout@v3
+        with:
+          repository: osm0sis/AnyKernel3
+          path: ${{ matrix.anykernel_path }}
 
-      - name: Apply SukiSU Ultra (SUSFS) patches
-        run: |
-          cd kernel_platform
-          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '11'
 
-      - name: Disable NR_CPUS tracepoint check
+      - name: Build SukiSU for ${{ matrix.device }}
         run: |
-          sed -i '/#error "Unsupported NR_CPUS for lb tracepoint."/d' \
-            kernel_platform/include/trace/events/sched.h
+          cd SukiSU
+          ./gradlew assembleRelease -Pdevice=${{ matrix.device }}
 
-      - name: Configure & build kernel
+      - name: Build kernel for ${{ matrix.device }}
         run: |
-          cd kernel_platform
+          cd ${{ matrix.kernel_path }}
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          make O=out guacamolep_defconfig
-          make -j$(nproc) O=out KCFLAGS="-Wno-error"
+          make O=out ${{ matrix.device }}_defconfig
+          make -j$(nproc) O=out
 
-      - name: Checkout AnyKernel3 template
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ env.ANYKERNEL_REPO }}
-          path: AnyKernel3
-          fetch-depth: 1
-
-      - name: Copy kernel artifacts
+      - name: Prepare AnyKernel3 for ${{ matrix.device }}
         run: |
-          cp kernel_platform/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
-          cp kernel_platform/out/arch/arm64/boot/Image       AnyKernel3/
+          cp ${{ matrix.kernel_path }}/out/arch/arm64/boot/Image.gz-dtb ${{ matrix.anykernel_path }}
+          cd ${{ matrix.anykernel_path }}
+          zip -r ../${{ matrix.device }}-kernel.zip .
 
-      - name: Package AnyKernel3 flashable ZIP
-        run: |
-          cd AnyKernel3
-          zip -r ../${{ github.event.inputs.device }}-mksu.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.inputs.device }}-mksu
-          path: ./*.zip
+          name: ${{ matrix.device }}-build
+          path: |
+            SukiSU/app/build/outputs/**/*.apk
+            */*-kernel.zip
