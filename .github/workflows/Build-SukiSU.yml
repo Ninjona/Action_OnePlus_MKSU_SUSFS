@@ -122,21 +122,6 @@ jobs:
           esac
           # Configure and build in separate output directory
           make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
-          # Build only the kernel image and device-tree blob, skip dtbs overlay to avoid syntax errors
+          # Skip dtbs overlays to avoid syntax errors
+          # Build only the compressed kernel+DTB image
           make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz-dtb -j$(nproc)
-
-      - name: Prepare AnyKernel3 directory
-        run: |
-          cp kernel_source/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
-          cp kernel_source/out/arch/arm64/boot/dts/oplus/guacamolep/*.dtb AnyKernel3/
-
-      - name: Package with AnyKernel3
-        working-directory: AnyKernel3
-        run: |
-          zip -r su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
-          path: AnyKernel3/su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
