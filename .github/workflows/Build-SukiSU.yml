@@ -107,13 +107,13 @@ jobs:
           # Select the appropriate defconfig
           case "${{ github.event.inputs.CONFIG }}" in
             oneplus_7pro_v)
-              DEFCONFIG=lineage_sm8150_defconfig ;;  # SM8150 platform
+              DEFCONFIG=vendor/sm8150-perf_defconfig ;;  # Snapdragon 855 perf config
             *)
-              DEFCONFIG=${{ github.event.inputs.CONFIG }}_defconfig ;;
+              DEFCONFIG=vendor/${{ github.event.inputs.CONFIG }}_defconfig ;;
           esac
-          # Generate .config in source directory (without O=out)
+          # Generate .config in source directory
           make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
-          # Now build using O=out
+          # Build output in separate folder
           make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE O=out -j$(nproc)
 
       - name: Prepare AnyKernel3 directory
