@@ -78,7 +78,7 @@ jobs:
 
       - name: Clone LineageOS kernel source
         run: |
-          git clone --depth=1 ${{ env.LINEAGE_KERNEL_REPO }} kernel_source
+          git clone --depth=1 ${{ env.LINEAGE_KERNEL_REPO }} kernel_source -b lineage-${{ github.event.inputs.KERNEL_VERSION }}
 
       - name: Clone AnyKernel3
         run: |
@@ -87,7 +87,7 @@ jobs:
       - name: Install cross-toolchain and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev clang gcc-aarch64-linux-gnu git
+          sudo apt-get install -y bc bison flex libssl-dev clang gcc-aarch64-linux-gnu git make
 
       - name: Clone LineageOS DTC tool
         working-directory: kernel_source
@@ -104,6 +104,7 @@ jobs:
           echo "CONFIG=${{ github.event.inputs.CONFIG }}" >> $GITHUB_ENV
           echo "KVER=${{ github.event.inputs.KERNEL_VERSION }}" >> $GITHUB_ENV
           echo "METHOD=${{ github.event.inputs.BUILD_METHOD }}" >> $GITHUB_ENV
+          echo "FEIL=${{ github.event.inputs.FEIL }}" >> $GITHUB_ENV
 
       - name: Build kernel
         working-directory: kernel_source
@@ -129,6 +130,35 @@ jobs:
           scripts/config --file out/.config --disable DTB_OVERLAY
           make -s O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE olddefconfig
 
-          # Build the kernel image only (skip overlay and dtbs)
-          # Only compile the compressed kernel image, not DTBs
-          make -j$(nproc) O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz
+          # Build kernel and DTBs
+          make -j$(nproc) O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz dtbs
+
+      - name: Package kernel
+        run: |
+          METHOD="${{ github.event.inputs.BUILD_METHOD }}"
+          FEIL="${{ github.event.inputs.FEIL }}"
+          CONFIG="${{ github.event.inputs.CONFIG }}"
+          KVER="${{ github.event.inputs.KERNEL_VERSION }}"
+
+          # Create output directory
+          mkdir -p output
+
+          if [ "$METHOD" = "AnyKernel3" ]; then
+            # Copy files to AnyKernel3
+            cp kernel_source/out/arch/arm64/boot/Image.gz AnyKernel3/Image.gz
+            mkdir -p AnyKernel3/dtb
+            cp kernel_source/out/arch/arm64/boot/dts/vendor/*.dtb AnyKernel3/dtb/
+            
+            # Create zip
+            cd AnyKernel3
+            zip -r9 ../output/kernel-${FEIL}-${CONFIG}-${KVER}.zip *
+          else
+            echo "TWRP packaging not implemented" >&2
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kernel-${{ github.event.inputs.FEIL }}
+          path: output/
