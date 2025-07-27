@@ -124,26 +124,11 @@ jobs:
           # Configure
           make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
 
-          # Disable in-tree DTBO build (avoid overlay syntax errors)
+          # Disable in-tree overlay build (avoid syntax errors)
           scripts/config --file out/.config --disable ARCH_MSM_DT_OVERLAY
           scripts/config --file out/.config --disable DTB_OVERLAY
           make -s O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE olddefconfig
 
-          # Build only the kernel image
-          make -j$(nproc) O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz-dtb
-
-      - name: Prepare AnyKernel3 directory
-        run: |
-          cp kernel_source/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
-          cp unpacked_dtbo/overlay_0.dtbo AnyKernel3/
-
-      - name: Zip kernel with AnyKernel3
-        working-directory: AnyKernel3
-        run: |
-          zip -r su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip .
-
-      - name: Upload kernel package
-        uses: actions/upload-artifact@v4
-        with:
-          name: su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
-          path: su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
+          # Build the kernel image only (skip overlay and dtbs)
+          # Only compile the compressed kernel image, not DTBs
+          make -j$(nproc) O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz
