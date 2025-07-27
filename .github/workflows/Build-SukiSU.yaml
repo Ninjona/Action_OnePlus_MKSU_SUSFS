@@ -32,12 +32,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
-      - name: Fetch and fix guacamolep_defconfig
+      - name: Fetch OnePlus vendor defconfig
         run: |
-          mkdir -p kernel_platform/arch/arm64/configs
-          curl -L -o kernel_platform/arch/arm64/configs/guacamolep_defconfig \
-            https://raw.githubusercontent.com/LineageOS/android_kernel_oneplus_sm8150/${{ github.event.inputs.branch }}/arch/arm64/configs/guacamolep_defconfig  \
-          && echo 'CONFIG_NR_CPUS=8' >> kernel_platform/arch/arm64/configs/guacamolep_defconfig
+          mkdir -p kernel_platform/arch/arm64/configs/vendor
+          curl -L -o kernel_platform/arch/arm64/configs/vendor/sm8150-perf_defconfig \
+            https://raw.githubusercontent.com/OnePlusOSS/android_kernel_oneplus_sm8150/oneplus/SM8150_P_9.0/arch/arm64/configs/vendor/sm8150-perf_defconfig
+          ln -sf vendor/sm8150-perf_defconfig kernel_platform/arch/arm64/configs/guacamolep_defconfig
 
       - name: Apply SukiSU Ultra (SUSFS) patches
         run: |
@@ -50,6 +50,7 @@ jobs:
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           make O=out guacamolep_defconfig
+          make -j$(nproc) O=out
           make -j$(nproc) O=out
 
       - name: Checkout AnyKernel3 template
