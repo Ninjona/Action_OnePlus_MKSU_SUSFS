@@ -47,7 +47,6 @@ on:
           - oneplus_13
           - oneplus_13t
           - oneplus_ace5_pro
-          - placeholder_option
       KERNEL_VERSION:
         type: choice
         description: "Kernel version"
@@ -104,9 +103,9 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           case "${{ env.CONFIG }}" in
             oneplus_7pro_v)
-              DEFCONFIG=guacamole_defconfig ;;  # OnePlus 7 Pro
+              DEFCONFIG=vendor/guacamolep_defconfig ;;  # OnePlus 7 Pro (guacamolep)
             *)
-              DEFCONFIG="${{ env.CONFIG }}_defconfig" ;;
+              DEFCONFIG=vendor/${{ env.CONFIG }}_defconfig ;;
           esac
           make O=out $DEFCONFIG
           make -j$(nproc) O=out
@@ -114,7 +113,7 @@ jobs:
       - name: Prepare AnyKernel3 directory
         run: |
           cp kernel_source/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
-          cp kernel_source/arch/arm64/boot/dts/oplus/guacamolep/*.dtb AnyKernel3/
+          cp kernel_source/out/arch/arm64/boot/dts/oplus/guacamolep/*.dtb AnyKernel3/
 
       - name: Zip kernel with AnyKernel3
         working-directory: AnyKernel3
