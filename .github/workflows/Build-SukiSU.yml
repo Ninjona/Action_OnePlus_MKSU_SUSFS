@@ -10,10 +10,9 @@ on:
       branch:
         description: 'Kernel branch (e.g., lineage-22.2)'
         required: true
-        default: 'lineage-22.2'  # Android 15 on LineageOS 22.2
+        default: 'lineage-22.2'
 
 env:
-  UPSTREAM_REPO:  'https://github.com/LineageOS/android_kernel_oneplus_sm8150.git'
   PATCH_REPO:     'https://github.com/rifsxd/MKSU-SKN.git'
   ANYKERNEL_REPO: 'https://github.com/osm0sis/AnyKernel3.git'
 
@@ -24,8 +23,9 @@ jobs:
       - name: Checkout upstream kernel
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.UPSTREAM_REPO }}
+          repository: 'LineageOS/android_kernel_oneplus_sm8150'
           ref: ${{ github.event.inputs.branch }}
+          path: kernel_platform
 
       - name: Apply MKSU‑SKN patches
         run: |
