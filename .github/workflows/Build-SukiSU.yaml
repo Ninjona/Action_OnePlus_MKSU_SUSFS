@@ -8,15 +8,15 @@ on:
         required: true
         default: 'guacamolep'
       branch:
-        description: 'Kernel branch (e.g., lineage-22.2)'
+        description: 'Kernel branch (e.g., op_sm8150-base)'
         required: true
-        default: 'lineage-22.2'
+        default: 'op_sm8150-base'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      UPSTREAM_REPO:  'LineageOS/android_kernel_oneplus_sm8150'
+      UPSTREAM_REPO: 'crdroidandroid/android_kernel_oneplus_sm8150'
       ANYKERNEL_REPO: 'osm0sis/AnyKernel3'
 
     steps:
