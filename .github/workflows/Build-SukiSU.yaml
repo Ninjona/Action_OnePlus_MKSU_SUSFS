@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UPSTREAM_REPO:  'LineageOS/android_kernel_oneplus_sm8150'
-      PATCH_REPO:     'rifsxd/MKSU-SKN'
       ANYKERNEL_REPO: 'osm0sis/AnyKernel3'
     steps:
       - name: Checkout upstream kernel
@@ -27,17 +26,10 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           path: kernel_platform
 
-      - name: Checkout MKSU‑SKN patches
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ env.PATCH_REPO }}
-          path: MKSU-SKN
-          fetch-depth: 1
-
-      - name: Apply MKSU‑SKN patches
+      - name: Apply SukiSU Ultra (SUSFS) patches
         run: |
-          cd MKSU-SKN
-          bash setup.sh susfs-main
+          cd kernel_platform
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
 
       - name: Configure & build kernel
         run: |
