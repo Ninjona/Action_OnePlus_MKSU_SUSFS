@@ -67,7 +67,6 @@ on:
           - "TWRP"
 env:
   KSUVER: SU
-  LINEAGE_KERNEL_REPO: https://github.com/LineageOS/android_kernel_oneplus_sm8150.git
   ANYKERNEL_REPO: https://github.com/osm0sis/AnyKernel3.git
 jobs:
   build:
@@ -76,33 +75,44 @@ jobs:
       - name: Checkout config repo
         uses: actions/checkout@v4
 
-      - name: Clone LineageOS kernel source
+      - name: Set kernel repository
         run: |
-          git clone --depth=1 ${{ env.LINEAGE_KERNEL_REPO }} kernel_source -b lineage-${{ inputs.KERNEL_VERSION }}
+          case "${{ inputs.CPU }}" in
+            sm7550|sm7675|sm8150|sm8450|sm8475|sm8550)
+              echo "LINEAGE_KERNEL_REPO=https://github.com/LineageOS/android_kernel_oneplus_${{ inputs.CPU }}.git" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "LINEAGE_KERNEL_REPO=https://github.com/LineageOS/android_kernel_oneplus_sm8150.git" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Clone kernel source
+        run: |
+          # Use default branch for the repository
+          git clone --depth=1 $LINEAGE_KERNEL_REPO kernel_source
 
       - name: Clone AnyKernel3
         run: |
           git clone --depth=1 ${{ env.ANYKERNEL_REPO }} AnyKernel3
 
-      - name: Install cross-toolchain and dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev clang gcc-aarch64-linux-gnu git make libelf-dev
 
-      - name: Clone LineageOS DTC tool
+      - name: Get kernel version from source
+        id: kernel_version
         working-directory: kernel_source
         run: |
-          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_tools-lineage.git prebuilts/tools-lineage
-
-      - name: Add DTC to PATH
-        run: |
-          echo "PATH=$(pwd)/kernel_source/prebuilts/tools-lineage/linux-x86/dtc:$PATH" >> $GITHUB_ENV
+          VERSION=$(grep -m1 '^VERSION =' Makefile | awk '{print $3}')
+          PATCHLEVEL=$(grep -m1 '^PATCHLEVEL =' Makefile | awk '{print $3}')
+          echo "KERNEL_VERSION_REAL=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+          echo "Detected kernel version: ${VERSION}.${PATCHLEVEL}"
 
       - name: Configure build variables
         run: |
           echo "CPU=${{ inputs.CPU }}" >> $GITHUB_ENV
           echo "CONFIG=${{ inputs.CONFIG }}" >> $GITHUB_ENV
-          echo "KVER=${{ inputs.KERNEL_VERSION }}" >> $GITHUB_ENV
           echo "METHOD=${{ inputs.BUILD_METHOD }}" >> $GITHUB_ENV
           echo "FEIL=${{ inputs.FEIL }}" >> $GITHUB_ENV
 
@@ -142,7 +152,7 @@ jobs:
           METHOD="${{ inputs.BUILD_METHOD }}"
           FEIL="${{ inputs.FEIL }}"
           CONFIG="${{ inputs.CONFIG }}"
-          KVER="${{ inputs.KERNEL_VERSION }}"
+          KVER="$KERNEL_VERSION_REAL"
           OUTPUT_FILE="kernel-${FEIL}-${CONFIG}-${KVER}.zip"
 
           mkdir -p output
