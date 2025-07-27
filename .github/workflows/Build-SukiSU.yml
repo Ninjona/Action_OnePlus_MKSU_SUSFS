@@ -52,8 +52,9 @@ on:
         type: choice
         description: "Kernel version"
         required: true
-        default: "5.15"
+        default: "6.1"
         options:
+          - "6.1"
           - "5.10"
           - "5.15"
           - "6.1"
@@ -98,7 +99,7 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           case "$CONFIG" in
             oneplus_7pro_v)
-              DEFCONFIG=guacamolep_defconfig ;;  # OnePlus 7 Pro codename: guacamolep
+              DEFCONFIG=guacamole_defconfig ;;  # OnePlus 7 Pro codename: guacamole ;;  # OnePlus 7 Pro codename: guacamolep
             *)
               DEFCONFIG="${CONFIG}_defconfig" ;;
           esac
