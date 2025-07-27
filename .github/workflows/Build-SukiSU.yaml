@@ -32,6 +32,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
+      - name: Fetch guacamolep_defconfig
+        run: |
+          mkdir -p kernel_platform/arch/arm64/configs
+          curl -L -o kernel_platform/arch/arm64/configs/guacamolep_defconfig \
+            https://raw.githubusercontent.com/LineageOS/android_kernel_oneplus_sm8150/${{ github.event.inputs.branch }}/arch/arm64/configs/guacamolep_defconfig
+
       - name: Apply SukiSU Ultra (SUSFS) patches
         run: |
           cd kernel_platform
