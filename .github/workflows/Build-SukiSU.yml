@@ -111,10 +111,9 @@ jobs:
             *)
               DEFCONFIG=vendor/${{ github.event.inputs.CONFIG }}_defconfig ;;
           esac
-          # Generate .config in source directory
-          make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
-          # Build output in separate folder
-          make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE O=out -j$(nproc)
+          # Configure and build in separate output directory
+          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
+          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE -j$(nproc)
 
       - name: Prepare AnyKernel3 directory
         run: |
