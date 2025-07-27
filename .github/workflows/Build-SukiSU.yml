@@ -105,17 +105,16 @@ jobs:
           CLANG_TRIPLE: aarch64-linux-gnu-
         run: |
           # Select the appropriate defconfig
-          case "$CONFIG" in
+          case "${{ github.event.inputs.CONFIG }}" in
             oneplus_7pro_v)
               DEFCONFIG=lineage_sm8150_defconfig ;;  # SM8150 platform
             *)
-              DEFCONFIG=${CONFIG}_defconfig ;;
+              DEFCONFIG=${{ github.event.inputs.CONFIG }}_defconfig ;;
           esac
-          # Clean and configure
-          make O=out mrproper
-          make O=out $DEFCONFIG
-          # Compile
-          make -j$(nproc) O=out
+          # Generate .config in source directory (without O=out)
+          make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
+          # Now build using O=out
+          make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE O=out -j$(nproc)
 
       - name: Prepare AnyKernel3 directory
         run: |
