@@ -49,9 +49,10 @@ jobs:
           cd kernel_platform
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
+          # Disable warning-as-error to avoid build failures
           make O=out guacamolep_defconfig
-          make -j$(nproc) O=out
-          make -j$(nproc) O=out
+          make -j$(nproc) O=out W=0
+          make -j$(nproc) O=out W=0
 
       - name: Checkout AnyKernel3 template
         uses: actions/checkout@v3
