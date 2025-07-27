@@ -1,0 +1,69 @@
+name: Build SukiSU Ultra for OnePlus7Pro
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: 'Device codename (e.g., guacamolep)'
+        required: true
+        default: 'guacamolep'
+      branch:
+        description: 'Kernel branch (e.g., lineage-22.2)'
+        required: true
+        default: 'lineage-22.2'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPO:  'LineageOS/android_kernel_oneplus_sm8150'
+      PATCH_REPO:     'rifsxd/MKSU-SKN'
+      ANYKERNEL_REPO: 'osm0sis/AnyKernel3'
+    steps:
+      - name: Checkout upstream kernel
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ github.event.inputs.branch }}
+          path: kernel_platform
+
+      - name: Checkout MKSU‑SKN patches
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.PATCH_REPO }}
+          path: MKSU-SKN
+          fetch-depth: 1
+
+      - name: Apply MKSU‑SKN patches
+        run: |
+          cd MKSU-SKN
+          bash setup.sh susfs-main
+
+      - name: Configure & build kernel
+        run: |
+          cd kernel_platform
+          CROSS_COMPILE=aarch64-linux-gnu- make O=out guacamolep_defconfig
+          CROSS_COMPILE=aarch64-linux-gnu- make -j$(nproc) O=out
+
+      - name: Checkout AnyKernel3 template
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.ANYKERNEL_REPO }}
+          path: AnyKernel3
+          fetch-depth: 1
+
+      - name: Copy kernel artifacts
+        run: |
+          cp kernel_platform/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cp kernel_platform/out/arch/arm64/boot/Image       AnyKernel3/
+
+      - name: Package AnyKernel3 flashable ZIP
+        run: |
+          cd AnyKernel3
+          zip -r ../${{ github.event.inputs.device }}-mksu.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.device }}-mksu
+          path: ./*.zip
