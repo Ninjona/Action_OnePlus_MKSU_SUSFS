@@ -6,7 +6,7 @@ on:
         type: choice
         description: "Branch"
         required: true
-        default: sm8550
+        default: sm8150
         options:
           - sm7550
           - sm7675
@@ -23,7 +23,7 @@ on:
         type: choice
         description: "Configuration file"
         required: true
-        default: oneplus_ace2pro_v
+        default: oneplus_7pro_v
         options:
           - oneplus_nord_ce4_v
           - oneplus_ace_3v_v
@@ -37,7 +37,7 @@ on:
           - oneplus_12r_v
           - oneplus_ace2pro_v
           - oneplus_ace3_v
-          - oneplus_7pro_v  # Added support for OnePlus 7 Pro (codename: guacamolep)
+          - oneplus_7pro_v  # OnePlus 7 Pro
           - oneplus_open_v
           - oneplus12_v
           - oneplus_13r
@@ -47,7 +47,7 @@ on:
           - oneplus_13
           - oneplus_13t
           - oneplus_ace5_pro
-          - GitHub may have a bug that prevents the last option from appearing; use this placeholder
+          - placeholder_option
       KERNEL_VERSION:
         type: choice
         description: "Kernel version"
@@ -55,64 +55,74 @@ on:
         default: "6.1"
         options:
           - "6.1"
-          - "5.10"
-          - "5.15"
-          - "6.1"
           - "6.6"
+          - "5.15"
+          - "5.10"
       BUILD_METHOD:
         type: choice
-        description: "Build method"
+        description: "Packaging method"
         required: true
         default: "AnyKernel3"
         options:
-          - "anykernel3"
-          - "twrp"
+          - "AnyKernel3"
+          - "TWRP"
 env:
   KSUVER: SU
+  LINEAGE_KERNEL_REPO: https://github.com/LineageOS/android_kernel_oneplus_sm8150.git
+  ANYKERNEL_REPO: https://github.com/osm0sis/AnyKernel3.git
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout SukiSU config repo
         uses: actions/checkout@v3
 
-      - name: Set up environment
+      - name: Clone LineageOS Kernel
         run: |
-          sudo apt-get update && sudo apt-get install -y bc bison flex libssl-dev
+          git clone --depth=1 ${{ env.LINEAGE_KERNEL_REPO }} kernel_source
+
+      - name: Clone AnyKernel3
+        run: |
+          git clone --depth=1 ${{ env.ANYKERNEL_REPO }} AnyKernel3
+
+      - name: Set up toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev
 
       - name: Configure build variables
         run: |
-          CPU="${{ github.event.inputs.CPU }}"
-          FEIL="${{ github.event.inputs.FEIL }}"
-          CONFIG="${{ github.event.inputs.CONFIG }}"
-          KVER="${{ github.event.inputs.KERNEL_VERSION }}"
-          METHOD="${{ github.event.inputs.BUILD_METHOD }}"
-          echo "CPU=$CPU" >> $GITHUB_ENV
-          echo "FEIL=$FEIL" >> $GITHUB_ENV
-          echo "CONFIG=$CONFIG" >> $GITHUB_ENV
-          echo "KVER=$KVER" >> $GITHUB_ENV
-          echo "METHOD=$METHOD" >> $GITHUB_ENV
+          echo "CPU=${{ github.event.inputs.CPU }}" >> $GITHUB_ENV
+          echo "CONFIG=${{ github.event.inputs.CONFIG }}" >> $GITHUB_ENV
+          echo "KVER=${{ github.event.inputs.KERNEL_VERSION }}" >> $GITHUB_ENV
+          echo "METHOD=${{ github.event.inputs.BUILD_METHOD }}" >> $GITHUB_ENV
 
       - name: Build kernel
+        working-directory: kernel_source
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          case "$CONFIG" in
+          case "${{ env.CONFIG }}" in
             oneplus_7pro_v)
-              DEFCONFIG=guacamole_defconfig ;;  # OnePlus 7 Pro codename: guacamole ;;  # OnePlus 7 Pro codename: guacamolep
+              DEFCONFIG=guacamole_defconfig ;;  # OnePlus 7 Pro
             *)
-              DEFCONFIG="${CONFIG}_defconfig" ;;
+              DEFCONFIG="${{ env.CONFIG }}_defconfig" ;;
           esac
-          make O=out ${DEFCONFIG}
+          make O=out $DEFCONFIG
           make -j$(nproc) O=out
 
-      - name: Package
+      - name: Prepare AnyKernel3 directory
         run: |
-          KSU_OUT=out/arch/arm64/boot/Image.gz-dtb
-          cp $KSU_OUT SU-${CONFIG}-${CPU}.img
+          cp kernel_source/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+          cp kernel_source/arch/arm64/boot/dts/oplus/guacamolep/*.dtb AnyKernel3/
 
-      - name: Upload kernel image
+      - name: Zip kernel with AnyKernel3
+        working-directory: AnyKernel3
+        run: |
+          zip -r su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip .
+
+      - name: Upload kernel package
         uses: actions/upload-artifact@v4
         with:
-          name: SU-${{ env.CONFIG }}-${{ env.CPU }}.img
-          path: SU-${{ env.CONFIG }}-${{ env.CPU }}.img
+          name: su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
+          path: AnyKernel3/su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
