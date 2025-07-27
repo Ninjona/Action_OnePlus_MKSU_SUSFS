@@ -53,7 +53,7 @@ jobs:
           zip -r ../${{ github.event.inputs.device }}-mksu.zip .
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.device }}-mksu
           path: ./*.zip
