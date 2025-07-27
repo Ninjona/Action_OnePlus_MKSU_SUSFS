@@ -122,7 +122,8 @@ jobs:
           esac
           # Configure and build in separate output directory
           make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
-          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE -j$(nproc)
+          # Build only the kernel image and device-tree blob, skip dtbs overlay to avoid syntax errors
+          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz-dtb -j$(nproc)
 
       - name: Prepare AnyKernel3 directory
         run: |
