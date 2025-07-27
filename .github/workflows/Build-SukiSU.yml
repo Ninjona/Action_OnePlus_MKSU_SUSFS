@@ -73,10 +73,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout SukiSU config repo
+      - name: Checkout config repo
         uses: actions/checkout@v3
 
-      - name: Clone LineageOS Kernel
+      - name: Clone LineageOS kernel source
         run: |
           git clone --depth=1 ${{ env.LINEAGE_KERNEL_REPO }} kernel_source
 
@@ -84,10 +84,10 @@ jobs:
         run: |
           git clone --depth=1 ${{ env.ANYKERNEL_REPO }} AnyKernel3
 
-      - name: Set up toolchain
+      - name: Install cross-toolchain and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev
+          sudo apt-get install -y bc bison flex libssl-dev clang gcc-aarch64-linux-gnu dtc
 
       - name: Configure build variables
         run: |
@@ -98,16 +98,23 @@ jobs:
 
       - name: Build kernel
         working-directory: kernel_source
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          CC: clang
+          CLANG_TRIPLE: aarch64-linux-gnu-
         run: |
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          case "${{ env.CONFIG }}" in
+          # Select the appropriate defconfig
+          case "$CONFIG" in
             oneplus_7pro_v)
-              DEFCONFIG=vendor/guacamolep_defconfig ;;  # OnePlus 7 Pro (guacamolep)
+              DEFCONFIG=lineage_sm8150_defconfig ;;  # SM8150 platform
             *)
-              DEFCONFIG=vendor/${{ env.CONFIG }}_defconfig ;;
+              DEFCONFIG=${CONFIG}_defconfig ;;
           esac
+          # Clean and configure
+          make O=out mrproper
           make O=out $DEFCONFIG
+          # Compile
           make -j$(nproc) O=out
 
       - name: Prepare AnyKernel3 directory
@@ -115,12 +122,12 @@ jobs:
           cp kernel_source/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
           cp kernel_source/out/arch/arm64/boot/dts/oplus/guacamolep/*.dtb AnyKernel3/
 
-      - name: Zip kernel with AnyKernel3
+      - name: Package with AnyKernel3
         working-directory: AnyKernel3
         run: |
           zip -r su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip .
 
-      - name: Upload kernel package
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: su-${{ github.event.inputs.CONFIG }}-${{ github.event.inputs.CPU }}.zip
