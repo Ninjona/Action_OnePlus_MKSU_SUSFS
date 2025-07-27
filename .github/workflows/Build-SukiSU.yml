@@ -122,6 +122,5 @@ jobs:
           esac
           # Configure and build in separate output directory
           make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE $DEFCONFIG
-          # Skip dtbs overlays to avoid syntax errors
-          # Build only the compressed kernel+DTB image
-          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz-dtb -j$(nproc)
+          # Build only the kernel+DTB image and device tree blob for guacamolep
+          make O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CC=$CC CLANG_TRIPLE=$CLANG_TRIPLE Image.gz-dtb arch/arm64/boot/dts/oplus/guacamolep/guacamolep.dtb -j$(nproc)
